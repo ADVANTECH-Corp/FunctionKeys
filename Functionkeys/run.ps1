@@ -30,24 +30,17 @@ function Add-AzFunctionKey {
 
     $kuduCredentials = (getKuduCreds $appName $resourceGroup)
     $authToken = Invoke-RestMethod -Uri "https://$appName.scm.azurewebsites.net/api/functions/admin/token" -Headers @{Authorization = ("Basic {0}" -f $kuduCredentials)} -Method GET
- 
-    $functions = Invoke-RestMethod -Method GET -Headers @{Authorization = ("Bearer {0}" -f $authToken)} -Uri "https://$appName.azurewebsites.net/admin/functions"
-    $functions = $functions.Name
-    
-    foreach ($functionName in $functions) {
-        if ($functionName -eq $funcName) {
-            $data = @{ 
-                "name"  = "$funcKeyName"
-                "value" = "$funcKeyValue"
-            }
-            $json = $data | ConvertTo-Json;
-    
-            $keys = Invoke-RestMethod -Method PUT -Headers @{Authorization = ("Bearer {0}" -f $authToken)} -ContentType "application/json" -Uri "https://$appName.azurewebsites.net/admin/functions/$functionName/keys/$funcKeyName" -body $json
-            
-            #Write-Output "Function '$functionName' key ('$funcKeyName') updated => $keys"
-            Write-Output "Function '$functionName' key ('$funcKeyName') updated"
-        }
+
+    Write-Output $appName $resourceGroup
+    $data = @{ 
+        "name"  = "$funcKeyName"
+        "value" = "$funcKeyValue"
     }
+    $json = $data | ConvertTo-Json;
+    
+    $keys = Invoke-RestMethod -Method PUT -Headers @{Authorization = ("Bearer {0}" -f $authToken)} -ContentType "application/json" -Uri "https://$appName.azurewebsites.net/admin/functions/$funcName/keys/$funcKeyName" -body $json
+            
+    Write-Output "Function '$functionName' key ('$funcKeyName') updated"
 }
 
 function Get-RandomString {
@@ -86,7 +79,9 @@ $tenantid = $env:TenantId
 $resourceGroup = $env:ResourceGroup
 $appName = $env:AppName
 $funcName = $env:FuncName
+$URL = 'https://' + $appName + '.azurewebsites.net/api/DeviceEnroll'
 
+Write-Host $pwd $appid $tenantid $resourceGroup $appName $funcName
 $passwd = ConvertTo-SecureString $pwd -AsPlainText -Force
 $pscredential = New-Object System.Management.Automation.PSCredential($appid, $passwd)
 Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $tenantid 
@@ -102,15 +97,9 @@ if (-not $funcKeyValue){
     Add-AzFunctionKey $appName $resourceGroup $funcKeyName $funcKeyValue
 }
 
-# Interact with query parameters or the body of the request.
-$name = $Request.Query.Name
-if (-not $name) {
-    $name = $Request.Body.Name
-}
-
-if ($name) {
+if ($funcKeyValue) {
     $status = [HttpStatusCode]::OK
-    $body = @{"Account"=$funcKeyName;"IoTKey"=$funcKeyValue}
+    $body = @{"Account"=$funcKeyName;"IoTKey"=$funcKeyValue;"URL"=$URL}
 }
 else {
     $status = [HttpStatusCode]::BadRequest
