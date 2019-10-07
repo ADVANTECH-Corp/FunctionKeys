@@ -96,10 +96,11 @@ if (-not $funcKeyValue){
     $funcKeyValue = (Get-RandomString)
     Add-AzFunctionKey $appName $resourceGroup $funcKeyName $funcKeyValue
 }
+$APIKEYCODE = "Azure-PaaS=" + $funcKeyValue
 
 if ($funcKeyValue) {
     $status = [HttpStatusCode]::OK
-    $body = @{"Account"=$funcKeyName;"IoTKey"=$funcKeyValue;"URL"=$URL}
+    $body = @{"Account"=$funcKeyName;"IoTKey"=$APIKEYCODE;"URL"=$URL}
 }
 else {
     $status = [HttpStatusCode]::BadRequest
